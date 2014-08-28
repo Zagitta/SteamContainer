@@ -1,0 +1,76 @@
+﻿<#@ template debug="true" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="$(SolutionDir)packages\SteamKit2.1.5.1\lib\net40\SteamKit2.dll" #>
+<#@ assembly name="$(SolutionDir)packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll" #>
+<#@ import namespace="SteamKit2" #>
+<#@ import namespace="SteamKit2.Internal" #>
+<#@ import namespace="SteamKit2.GC.Dota.Internal" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Diagnostics" #>
+<#@ output extension=".cs" #>
+using System;
+using System.Collections.Generic;
+using SteamKit2.GC.Dota.Internal;
+
+namespace SteamContainer.Util
+{
+    public static class TypeToEDOTAGCMsg
+    {
+        private static readonly Dictionary<Type, EDOTAGCMsg> EMsgMap = new Dictionary<Type, EDOTAGCMsg>
+        {
+<#
+			var etype = typeof (EDOTAGCMsg);
+            var assembly = etype.Assembly;
+            
+            HashSet<string> eNames = new HashSet<string>(Enum.GetNames(etype));
+			
+            foreach (var t in assembly.DefinedTypes.OrderBy(info => info.Name))
+            {
+                var name = t.Name;
+                if(t.IsClass == false)
+                    continue;
+                if (name.Length < 4) 
+                    continue;
+                if(t.FullName.StartsWith("SteamKit2.GC.Dota.Internal.") == false)
+                    continue;
+
+                var eName = "k_E" + name.Substring(1);
+
+                if(eNames.Contains(eName))
+				{
+#>
+			{typeof(<#= name #>), EDOTAGCMsg.<#= eName #>},
+<#
+					continue;
+				}
+
+				if (name.Length < 8) 
+                    continue;
+
+				eName = "k_EMsgGC" + name.Substring(8);
+				
+                if(eNames.Contains(eName))
+				{
+#>
+			{typeof(<#= name #>), EDOTAGCMsg.<#= eName #>},
+<#
+					continue;
+				}
+
+		}
+#>
+		};
+
+        public static EDOTAGCMsg ToEMsg<T>()
+        {
+            return EMsgMap[typeof (T)];
+        }
+
+		public static uint DotA2TypeToId(Type t)
+		{
+			return (uint)EMsgMap[t];
+		}
+    }
+}

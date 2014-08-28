@@ -1,0 +1,56 @@
+﻿<#@ template debug="true" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="$(SolutionDir)packages\SteamKit2.1.5.1\lib\net40\SteamKit2.dll" #>
+<#@ assembly name="$(SolutionDir)packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll" #>
+<#@ import namespace="SteamKit2" #>
+<#@ import namespace="SteamKit2.Internal" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Diagnostics" #>
+<#@ output extension=".cs" #>
+
+using System;
+using System.Collections.Generic;
+using SteamKit2;
+using SteamKit2.Internal;
+
+namespace SteamContainer.Util
+{
+    public static class TypeToEMsg
+    {
+        private static readonly Dictionary<Type, EMsg> EMsgMap = new Dictionary<Type, EMsg>
+        {
+<#
+			var etype = typeof (EMsg);
+            var assembly = etype.Assembly;
+            
+            HashSet<string> eNames = new HashSet<string>(Enum.GetNames(etype));
+			
+            foreach (var t in assembly.DefinedTypes.OrderBy(info => info.Name))
+            {
+                var name = t.Name;
+                if(t.IsClass == false)
+                    continue;
+                if (name.Length < 4) 
+                    continue;
+                if(t.FullName.StartsWith("SteamKit2.Internal.CMsg") == false)
+                    continue;
+
+                var eName = name.Substring(4);
+
+                if(eNames.Contains(eName) == false)
+					continue;
+#>
+			{typeof(<#= name #>), EMsg.<#= eName #>},
+<#
+		}
+#>
+		};
+
+        public static EMsg ToEMsg<T>()
+        {
+            return EMsgMap[typeof (T)];
+        }
+    }
+}
